@@ -7,13 +7,34 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let keysDatabase = [
-    { key: 'MFA-KEY-9981', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-1', discordUser: 'Ninguno', exhausted: false },
-    { key: 'MFA-KEY-1234', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-2', discordUser: 'Ninguno', exhausted: false },
-    { key: 'MFA-KEY-5678', used: true, fileUrl: 'https://mega.nz/archivo-ejemplo-3', discordUser: 'Usuario#1234', exhausted: false }
-];
+const DB_FILE = path.join(__dirname, 'database.json');
 
-let bannedUsers = ['UsuarioTraficante#0000'];
+// Cargar o inicializar la base de datos desde un archivo JSON local
+function loadDatabase() {
+    if (fs.existsSync(DB_FILE)) {
+        try {
+            const data = fs.readFileSync(DB_FILE, 'utf8');
+            return JSON.parse(data);
+        } catch (e) {
+            console.error("Error leyendo database.json, usando valores por defecto.");
+        }
+    }
+    // Datos iniciales por defecto si no existe el archivo
+    return {
+        keys: [
+            { key: 'MFA-KEY-9981', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-1', discordUser: 'Ninguno', exhausted: false },
+            { key: 'MFA-KEY-1234', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-2', discordUser: 'Ninguno', exhausted: false },
+            { key: 'MFA-KEY-5678', used: true, fileUrl: 'https://mega.nz/archivo-ejemplo-3', discordUser: 'Usuario#1234', exhausted: false }
+        ],
+        bannedUsers: ['UsuarioTraficante#0000']
+    };
+}
+
+function saveDatabase(data) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+let db = loadDatabase();
 const ADMIN_PASSWORD = ".gg";
 let activeAdmins = new Set();
 
@@ -21,12 +42,12 @@ app.get('/', (req, res) => {
     const clientIp = req.ip;
     const isAdmin = activeAdmins.has(clientIp);
     
-    let totalKeys = keysDatabase.length;
-    let usedKeys = keysDatabase.filter(k => k.used).length;
-    let exhaustedKeys = keysDatabase.filter(k => k.exhausted).length;
+    let totalKeys = db.keys.length;
+    let usedKeys = db.keys.filter(k => k.used).length;
+    let exhaustedKeys = db.keys.filter(k => k.exhausted).length;
     let availableKeys = totalKeys - usedKeys - exhaustedKeys;
 
-    let rows = keysDatabase.map((item, index) => {
+    let rows = db.keys.map((item, index) => {
         let statusBadge = item.exhausted 
             ? '<span class="badge badge-exhausted">⚪ Agotada</span>' 
             : (item.used 
@@ -102,7 +123,7 @@ app.get('/', (req, res) => {
                 <input type="text" name="discordUser" placeholder="Usuario#0000" required style="flex:1;">
                 <button class="btn btn-danger">Banear Usuario</button>
             </form>
-            <p style="font-size: 12px; color: #888; margin-top: 10px;">Usuarios baneados: ${bannedUsers.join(', ') || 'Ninguno'}</p>
+            <p style="font-size: 12px; color: #888; margin-top: 10px;">Usuarios baneados: ${db.bannedUsers.join(', ') || 'Ninguno'}</p>
         </div>
     ` : '';
 
@@ -141,8 +162,9 @@ app.post('/admin/logout', (req, res) => {
 app.post('/admin/toggle-exhausted', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { index } = req.body;
-    if (keysDatabase[index]) {
-        keysDatabase[index].exhausted = !keysDatabase[index].exhausted;
+    if (db.keys[index]) {
+        db.keys[index].exhausted = !db.keys[index].exhausted;
+        saveDatabase(db);
     }
     res.redirect('/');
 });
@@ -151,7 +173,8 @@ app.post('/admin/add-key', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { key, fileUrl } = req.body;
     if (key && fileUrl) {
-        keysDatabase.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
+        db.keys.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
+        saveDatabase(db);
     }
     res.redirect('/');
 });
@@ -159,8 +182,9 @@ app.post('/admin/add-key', (req, res) => {
 app.post('/admin/delete-key', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { index } = req.body;
-    if (keysDatabase[index]) {
-        keysDatabase.splice(index, 1);
+    if (db.keys[index]) {
+        db.keys.splice(index, 1);
+        saveDatabase(db);
     }
     res.redirect('/');
 });
@@ -168,7 +192,8 @@ app.post('/admin/delete-key', (req, res) => {
 app.post('/admin/delete-by-name', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { keyName } = req.body;
-    keysDatabase = keysDatabase.filter(k => k.key !== keyName);
+    db.keys = db.keys.filter(k => k.key !== keyName);
+    saveDatabase(db);
     res.redirect('/');
 });
 
@@ -176,7 +201,10 @@ app.post('/admin/ban-user', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { discordUser } = req.body;
     if (discordUser) {
-        if (!bannedUsers.includes(discordUser)) bannedUsers.push(discordUser);
+        if (!db.bannedUsers.includes(discordUser)) {
+            db.bannedUsers.push(discordUser);
+            saveDatabase(db);
+        }
     }
     res.redirect('/');
 });
@@ -185,7 +213,7 @@ app.get('/getkey', (req, res) => {
     const userKey = req.query.key;
     const discordUser = req.query.user || 'Usuario de Discord';
 
-    if (bannedUsers.includes(discordUser)) {
+    if (db.bannedUsers.includes(discordUser)) {
         return res.json({ valid: false, message: 'Tu usuario de Discord está baneado del sistema.' });
     }
 
@@ -193,7 +221,7 @@ app.get('/getkey', (req, res) => {
         return res.json({ valid: false, message: 'No se proporcionó ninguna clave.' });
     }
 
-    const foundKey = keysDatabase.find(k => k.key === userKey);
+    const foundKey = db.keys.find(k => k.key === userKey);
 
     if (!foundKey) {
         return res.json({ valid: false, message: 'La clave ingresada no existe.' });
@@ -209,6 +237,7 @@ app.get('/getkey', (req, res) => {
 
     foundKey.used = true;
     foundKey.discordUser = discordUser;
+    saveDatabase(db);
 
     return res.json({
         valid: true,
