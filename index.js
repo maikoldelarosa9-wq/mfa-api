@@ -16,8 +16,13 @@ let keysDatabase = [
 let bannedUsers = ['UsuarioTraficante#0000'];
 const ADMIN_PASSWORD = ".gg";
 
+// Almacenamiento temporal de sesiones activas por IP o memoria simple
+let activeAdmins = new Set();
+
 app.get('/', (req, res) => {
-    const isAdmin = req.query.admin === ADMIN_PASSWORD;
+    // Si recarga, limpiamos cualquier estado anterior o validamos por parámetro temporal
+    const clientIp = req.ip;
+    const isAdmin = activeAdmins.has(clientIp);
     
     let totalKeys = keysDatabase.length;
     let usedKeys = keysDatabase.filter(k => k.used).length;
@@ -34,7 +39,6 @@ app.get('/', (req, res) => {
         let adminActions = isAdmin ? `
             <td style="padding: 14px;">
                 <form action="/admin/toggle-block" method="POST" style="display:inline;">
-                    <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
                     <input type="hidden" name="index" value="${index}">
                     <button class="btn btn-sm ${item.blocked ? 'btn-success' : 'btn-danger'}">
                         ${item.blocked ? 'Desbloquear' : 'Bloquear'}
@@ -54,12 +58,14 @@ app.get('/', (req, res) => {
         `;
     }).join('');
 
+    // Solo muestra el campo para poner la clave y acceder de forma limpia
     let adminLoginSection = isAdmin ? `
-        <span style="color: #34c759; font-weight: 600; font-size: 13px;">● Admin .gg Activo</span>
-        <a href="/" class="btn btn-danger btn-sm" style="text-decoration:none;">Salir</a>
+        <form action="/admin/logout" method="POST">
+            <button class="btn btn-danger btn-sm">Cerrar Sesión</button>
+        </form>
     ` : `
-        <form action="/" method="GET" style="display:flex; gap:8px;">
-            <input type="password" name="admin" placeholder="Clave admin (.gg)" required>
+        <form action="/admin/login" method="POST" style="display:flex; gap:8px;">
+            <input type="password" name="password" placeholder="Clave admin" required>
             <button class="btn btn-sm">Acceder</button>
         </form>
     `;
@@ -76,7 +82,6 @@ app.get('/', (req, res) => {
         <div class="panel-box">
             <div class="panel-title">➕ Generar Nueva Key</div>
             <form action="/admin/add-key" method="POST" style="display:flex; gap:10px; flex-wrap: wrap;">
-                <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
                 <input type="text" name="key" placeholder="Ej: .GG-KEY-2026" required style="flex:1;">
                 <input type="text" name="fileUrl" placeholder="Link de descarga (MEGA/Mediafire)" required style="flex:2;">
                 <button class="btn btn-success">Añadir Clave</button>
@@ -85,7 +90,6 @@ app.get('/', (req, res) => {
         <div class="panel-box">
             <div class="panel-title">🚫 Banear Usuario de Discord</div>
             <form action="/admin/ban-user" method="POST" style="display:flex; gap:10px;">
-                <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
                 <input type="text" name="discordUser" placeholder="Usuario#0000" required style="flex:1;">
                 <button class="btn btn-danger">Banear Usuario</button>
             </form>
@@ -112,28 +116,44 @@ app.get('/', (req, res) => {
     });
 });
 
+app.post('/admin/login', (req, res) => {
+    const { password } = req.body;
+    if (password === ADMIN_PASSWORD) {
+        activeAdmins.add(req.ip);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/logout', (req, res) => {
+    activeAdmins.delete(req.ip);
+    res.redirect('/');
+});
+
 app.post('/admin/toggle-block', (req, res) => {
-    const { password, index } = req.body;
-    if (password === ADMIN_PASSWORD && keysDatabase[index]) {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { index } = req.body;
+    if (keysDatabase[index]) {
         keysDatabase[index].blocked = !keysDatabase[index].blocked;
     }
-    res.redirect(`/?admin=${ADMIN_PASSWORD}`);
+    res.redirect('/');
 });
 
 app.post('/admin/add-key', (req, res) => {
-    const { password, key, fileUrl } = req.body;
-    if (password === ADMIN_PASSWORD && key && fileUrl) {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { key, fileUrl } = req.body;
+    if (key && fileUrl) {
         keysDatabase.push({ key, used: false, fileUrl, discordUser: 'Ninguno', blocked: false });
     }
-    res.redirect(`/?admin=${ADMIN_PASSWORD}`);
+    res.redirect('/');
 });
 
 app.post('/admin/ban-user', (req, res) => {
-    const { password, discordUser } = req.body;
-    if (password === ADMIN_PASSWORD && discordUser) {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { discordUser } = req.body;
+    if (discordUser) {
         if (!bannedUsers.includes(discordUser)) bannedUsers.push(discordUser);
     }
-    res.redirect(`/?admin=${ADMIN_PASSWORD}`);
+    res.redirect('/');
 });
 
 app.get('/getkey', (req, res) => {
