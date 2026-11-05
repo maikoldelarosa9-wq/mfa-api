@@ -3,32 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>.gg — Panel & Licencias</title>
+    <title>.gg — Panel de Administración & Licencias</title>
     <style>
         :root {
             --bg-color: #000000;
             --card-bg: #0a0a0c;
             --border-color: #1a1a1e;
             --border-focus: #44444f;
+            --accent-color: #ffffff;
             --text-main: #ededed;
             --text-muted: #888888;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 1050px; width: 100%; margin: 0 auto; }
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 1050px; margin: 0 auto; }
         
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 25px; margin-bottom: 40px; width: 100%; }
-        .brand { display: flex; align-items: center; gap: 12px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 25px; margin-bottom: 30px; }
+        .brand { display: flex; align-items: center; gap: 14px; }
         .logo-box { width: 38px; height: 38px; background: #111; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
         .logo-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; line-height: 1.2; }
+        h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
         .subtitle { font-size: 12px; color: var(--text-muted); }
 
         input[type="password"], input[type="text"] {
             background-color: #000000 !important;
             color: #ffffff !important;
             border: 1px solid var(--border-color);
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 8px;
             font-size: 13px;
             outline: none;
@@ -40,18 +41,21 @@
         }
         input::placeholder { color: #555555; }
 
+        .login-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        .admin-input { width: 150px; }
+
         .btn { background: #ffffff; color: #000000; border: none; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .btn:hover { opacity: 0.85; transform: translateY(-1px); }
         .btn-danger { background: #ff3b30; color: #fff; }
         .btn-success { background: #34c759; color: #fff; }
         .btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 8px; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; }
         .stat-card h3 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         .stat-card p { font-size: 26px; font-weight: 800; color: #fff; }
 
-        .panel-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .panel-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 25px; }
         .panel-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         
         .admin-nav-banner { background: linear-gradient(135deg, #111115, #0a0a0c); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
@@ -66,8 +70,6 @@
         .badge-active { background: rgba(52, 199, 89, 0.1); color: #34c759; }
         .badge-used { background: rgba(255, 59, 48, 0.1); color: #ff3b30; }
         .badge-exhausted { background: rgba(142, 142, 147, 0.1); color: #aeaeb2; }
-
-        .auth-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 30px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); margin: 40px auto; }
     </style>
 </head>
 <body>
@@ -75,16 +77,4 @@
         <header>
             <div class="brand">
                 <div class="logo-box">
-                    <img src="https://media.discordapp.net/attachments/1366100160928677890/1567745614345801759/gg.png?ex=6aed4c61&is=6aebfae1&hm=12cb5697d04f34fb56b90f3780d5ab4d2ec375d79faa47106b57f764afa1a2ed&=&format=webp&quality=lossless&width=1280&height=960" alt=".gg Logo">
-                </div>
-                <div>
-                    <h1>.gg</h1>
-                    <span class="subtitle">Panel de Distribución y Licencias</span>
-                </div>
-            </div>
-        </header>
-
-        {{{content}}}
-    </div>
-</body>
-</html>
+                    <img src="
