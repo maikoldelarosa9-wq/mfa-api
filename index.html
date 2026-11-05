@@ -24,13 +24,27 @@
         h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
         .subtitle { font-size: 12px; color: var(--text-muted); }
 
-        /* Barra de admin con estética negra y bordes redondeados */
-        .login-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
-        .admin-input { background: #000000; border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.2s ease; width: 150px; }
-        .admin-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(255,255,255,0.04); }
-        .admin-input::placeholder { color: #555; }
+        /* Estilos generales y forzados para todos los inputs (fondo negro total) */
+        input[type="password"], input[type="text"] {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            border: 1px solid var(--border-color);
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input[type="password"]:focus, input[type="text"]:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
+        }
+        input::placeholder { color: #555555; }
 
-        .btn { background: #ffffff; color: #000000; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .login-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        .admin-input { width: 150px; }
+
+        .btn { background: #ffffff; color: #000000; border: none; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .btn:hover { opacity: 0.85; transform: translateY(-1px); }
         .btn-danger { background: #ff3b30; color: #fff; }
         .btn-success { background: #34c759; color: #fff; }
