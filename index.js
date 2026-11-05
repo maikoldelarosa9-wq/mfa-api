@@ -37,7 +37,7 @@ const ADMIN_PASSWORD = ".gg";
 let activeAdmins = new Set();
 
 app.get('/', (req, res) => {
-    const clientIp = req.ip;
+    const clientIp = req.ip || req.connection.remoteAddress;
     const isAdmin = activeAdmins.has(clientIp);
     
     let totalKeys = db.keys.length;
@@ -127,8 +127,13 @@ app.get('/', (req, res) => {
 
     let adminHeaderAction = isAdmin ? '<th>Acciones</th>' : '';
 
-    fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, htmlTemplate) => {
-        if (err) return res.status(500).send('Error al cargar la interfaz web.');
+    const htmlPath = path.join(__dirname, 'index.html');
+    if (!fs.existsSync(htmlPath)) {
+        return res.status(500).send('Error crítico: Falta el archivo index.html en el servidor.');
+    }
+
+    fs.readFile(htmlPath, 'utf8', (err, htmlTemplate) => {
+        if (err) return res.status(500).send('Error al leer la interfaz web.');
 
         let finalHtml = htmlTemplate
             .replace('{{{adminLoginSection}}}', adminLoginSection)
@@ -145,20 +150,23 @@ app.get('/', (req, res) => {
 });
 
 app.post('/admin/login', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
-        activeAdmins.add(req.ip);
+        activeAdmins.add(clientIp);
     }
     res.redirect('/');
 });
 
 app.post('/admin/logout', (req, res) => {
-    activeAdmins.delete(req.ip);
+    const clientIp = req.ip || req.connection.remoteAddress;
+    activeAdmins.delete(clientIp);
     res.redirect('/');
 });
 
 app.post('/admin/toggle-exhausted', (req, res) => {
-    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const clientIp = req.ip || req.connection.remoteAddress;
+    if (!activeAdmins.has(clientIp)) return res.redirect('/');
     const { index } = req.body;
     if (db.keys[index]) {
         db.keys[index].exhausted = !db.keys[index].exhausted;
@@ -168,82 +176,8 @@ app.post('/admin/toggle-exhausted', (req, res) => {
 });
 
 app.post('/admin/add-key', (req, res) => {
-    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const clientIp = req.ip || req.connection.remoteAddress;
+    if (!activeAdmins.has(clientIp)) return res.redirect('/');
     const { key, fileUrl } = req.body;
     if (key && fileUrl) {
-        db.keys.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
-        saveDatabase(db);
-    }
-    res.redirect('/');
-});
-
-app.post('/admin/delete-key', (req, res) => {
-    if (!activeAdmins.has(req.ip)) return res.redirect('/');
-    const { index } = req.body;
-    if (db.keys[index]) {
-        db.keys.splice(index, 1);
-        saveDatabase(db);
-    }
-    res.redirect('/');
-});
-
-app.post('/admin/delete-by-name', (req, res) => {
-    if (!activeAdmins.has(req.ip)) return res.redirect('/');
-    const { keyName } = req.body;
-    db.keys = db.keys.filter(k => k.key !== keyName);
-    saveDatabase(db);
-    res.redirect('/');
-});
-
-app.post('/admin/ban-user', (req, res) => {
-    if (!activeAdmins.has(req.ip)) return res.redirect('/');
-    const { discordUser } = req.body;
-    if (discordUser) {
-        if (!db.bannedUsers.includes(discordUser)) {
-            db.bannedUsers.push(discordUser);
-            saveDatabase(db);
-        }
-    }
-    res.redirect('/');
-});
-
-app.get('/getkey', (req, res) => {
-    const userKey = req.query.key;
-    const discordUser = req.query.user || 'Usuario de Discord';
-
-    if (db.bannedUsers.includes(discordUser)) {
-        return res.json({ valid: false, message: 'Tu usuario de Discord está baneado del sistema.' });
-    }
-
-    if (!userKey) {
-        return res.json({ valid: false, message: 'No se proporcionó ninguna clave.' });
-    }
-
-    const foundKey = db.keys.find(k => k.key === userKey);
-
-    if (!foundKey) {
-        return res.json({ valid: false, message: 'La clave ingresada no existe.' });
-    }
-
-    if (foundKey.exhausted) {
-        return res.json({ valid: false, message: 'Esta clave ha sido marcada como agotada por el administrador.' });
-    }
-
-    if (foundKey.used) {
-        return res.json({ valid: false, message: 'Esta clave ya fue utilizada anteriormente.' });
-    }
-
-    foundKey.used = true;
-    foundKey.discordUser = discordUser;
-    saveDatabase(db);
-
-    return res.json({
-        valid: true,
-        fileUrl: foundKey.fileUrl,
-        message: '¡Clave canjeada con éxito!'
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
+        db.keys.push({ key, used: false, file
