@@ -9,7 +9,7 @@
             --bg-color: #000000;
             --card-bg: #0a0a0c;
             --border-color: #1a1a1e;
-            --border-focus: #33333d;
+            --border-focus: #44444f;
             --accent-color: #ffffff;
             --text-main: #ededed;
             --text-muted: #888888;
@@ -24,17 +24,17 @@
         h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
         .subtitle { font-size: 12px; color: var(--text-muted); }
 
-        /* Estética mejorada para la barra de admin */
-        .login-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 6px 10px; display: flex; gap: 8px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .admin-input { background: #000000; border: 1px solid var(--border-color); color: #fff; padding: 9px 14px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.2s ease; width: 160px; }
-        .admin-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(255,255,255,0.05); }
+        /* Barra de admin con estética negra y bordes redondeados */
+        .login-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        .admin-input { background: #000000; border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.2s ease; width: 150px; }
+        .admin-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(255,255,255,0.04); }
         .admin-input::placeholder { color: #555; }
 
-        .btn { background: #ffffff; color: #000000; border: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .btn { background: #ffffff; color: #000000; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
         .btn:hover { opacity: 0.85; transform: translateY(-1px); }
         .btn-danger { background: #ff3b30; color: #fff; }
         .btn-success { background: #34c759; color: #fff; }
-        .btn-sm { padding: 8px 14px; font-size: 12px; }
+        .btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 8px; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; }
@@ -44,7 +44,7 @@
         .panel-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 25px; }
         .panel-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         
-        .admin-nav-banner { background: linear-gradient(135deg, #111115, #0a0a0c); border: 1px solid #333; border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-nav-banner { background: linear-gradient(135deg, #111115, #0a0a0c); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
 
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 14px; color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border-color); letter-spacing: 0.5px; }
