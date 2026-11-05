@@ -15,7 +15,7 @@ function loadDatabase() {
             const data = fs.readFileSync(DB_FILE, 'utf8');
             return JSON.parse(data);
         } catch (e) {
-            console.error("Error leyendo database.json, usando valores por defecto.");
+            console.error("Error leyendo database.json");
         }
     }
     return {
@@ -40,132 +40,107 @@ app.get('/', (req, res) => {
     const clientIp = req.ip;
     const isAdmin = activeAdmins.has(clientIp);
     const userKey = req.query.key;
-    const discordUser = req.query.user;
+    const discordUser = req.query.user || 'Usuario#0000';
 
-    // Si introduce la clave de admin en el campo general
     if (userKey === ADMIN_PASSWORD) {
         activeAdmins.add(clientIp);
         return res.redirect('/');
     }
 
-    // Si ya es administrador activo, mostrar el panel
     if (isAdmin) {
-        return renderAdminPanel(req, res);
+        return renderPage(res, true, null, null);
     }
 
-    // Si el usuario ingresó una key, validarla
     if (userKey) {
         if (db.bannedUsers.includes(discordUser)) {
-            return sendAuthError(res, "Tu usuario de Discord está baneado del sistema.");
+            return renderPage(res, false, "Tu usuario de Discord está baneado del sistema.", null);
         }
 
         const foundKey = db.keys.find(k => k.key === userKey);
 
         if (!foundKey) {
-            return sendAuthError(res, "La clave ingresada no existe.");
+            return renderPage(res, false, "La clave ingresada no existe.", null);
         }
 
         if (foundKey.exhausted) {
-            return sendAuthError(res, "Esta clave ha sido marcada como agotada.");
+            return renderPage(res, false, "Esta clave ha sido marcada como agotada.", null);
         }
 
         if (foundKey.used && foundKey.discordUser !== discordUser) {
-            return sendAuthError(res, "Esta clave ya fue utilizada por otro usuario.");
+            return renderPage(res, false, "Esta clave ya fue utilizada por otro usuario.", null);
         }
 
         if (!foundKey.used) {
             foundKey.used = true;
-            foundKey.discordUser = discordUser || 'Usuario#0000';
+            foundKey.discordUser = discordUser;
             saveDatabase(db);
         }
 
-        return res.send(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <title>.gg — Acceso Concedido</title>
-                <style>
-                    body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                    .card { background: #0a0a0c; border: 1px solid #1a1a1e; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; width: 100%; }
-                    .btn { background: #34c759; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h2>¡Key Verificada!</h2>
-                    <p style="color: #888; font-size: 13px; margin: 10px 0;">Tu acceso ha sido validado correctamente.</p>
-                    <a href="${foundKey.fileUrl}" target="_blank" class="btn">Descargar Archivo</a>
-                </div>
-            </body>
-            </html>
-        `);
+        return renderPage(res, false, null, foundKey.fileUrl);
     }
 
-    // Pantalla de autenticación obligatoria inicial
-    return sendAuthError(res, "");
+    return renderPage(res, false, null, null);
 });
 
-function sendAuthError(res, errorMessage) {
-    fs.readFile(path.join(__dirname, 'auth.html'), 'utf8', (err, html) => {
-        if (err) return res.status(500).send('Error al cargar la página de autenticación.');
-        const errorHtml = errorMessage ? `<div class="error">${errorMessage}</div>` : '';
-        res.send(html.replace('{{{errorMessage}}}', errorHtml));
-    });
-}
-
-function renderAdminPanel(req, res) {
-    let totalKeys = db.keys.length;
-    let usedKeys = db.keys.filter(k => k.used).length;
-    let exhaustedKeys = db.keys.filter(k => k.exhausted).length;
-    let availableKeys = totalKeys - usedKeys - exhaustedKeys;
-
-    let rows = db.keys.map((item, index) => {
-        let statusBadge = item.exhausted 
-            ? '<span class="badge badge-exhausted">⚪ Agotada</span>' 
-            : (item.used 
-                ? '<span class="badge badge-used">🔴 Utilizada</span>' 
-                : '<span class="badge badge-active">🟢 Disponible</span>');
-
-        return `
-            <tr>
-                <td class="font-mono">${item.key}</td>
-                <td>${statusBadge}</td>
-                <td style="color: #bbb;">${item.discordUser}</td>
-                <td><a href="${item.fileUrl}" target="_blank" class="url-link">${item.fileUrl}</a></td>
-                <td style="padding: 14px; display: flex; gap: 6px; align-items: center;">
-                    <form action="/admin/toggle-exhausted" method="POST" style="display:inline;">
-                        <input type="hidden" name="index" value="${index}">
-                        <button class="btn btn-sm" style="background: #222; color: #fff; border: 1px solid #444;">
-                            ${item.exhausted ? 'Activar' : 'Agotar'}
-                        </button>
-                    </form>
-                    <form action="/admin/delete-key" method="POST" style="display:inline;">
-                        <input type="hidden" name="index" value="${index}">
-                        <button class="btn btn-sm" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
+function renderPage(res, isAdmin, errorMessage, unlockedUrl) {
     fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, htmlTemplate) => {
-        if (err) return res.status(500).send('Error al cargar la interfaz web.');
+        if (err) return res.status(500).send('Error al cargar la interfaz.');
 
-        let finalHtml = htmlTemplate
-            .replace('{{{adminLoginSection}}}', `<form action="/admin/logout" method="POST"><button class="btn btn-danger btn-sm">Cerrar Sesión</button></form>`)
-            .replace('{{totalKeys}}', totalKeys)
-            .replace('{{availableKeys}}', availableKeys)
-            .replace('{{usedKeys}}', usedKeys)
-            .replace('{{exhaustedKeys}}', exhaustedKeys)
-            .replace('{{{adminPanelSection}}}', `
+        let totalKeys = db.keys.length;
+        let usedKeys = db.keys.filter(k => k.used).length;
+        let exhaustedKeys = db.keys.filter(k => k.exhausted).length;
+        let availableKeys = totalKeys - usedKeys - exhaustedKeys;
+
+        let rows = db.keys.map((item, index) => {
+            let statusBadge = item.exhausted 
+                ? '<span class="badge badge-exhausted">⚪ Agotada</span>' 
+                : (item.used 
+                    ? '<span class="badge badge-used">🔴 Utilizada</span>' 
+                    : '<span class="badge badge-active">🟢 Disponible</span>');
+
+            return `
+                <tr>
+                    <td class="font-mono">${item.key}</td>
+                    <td>${statusBadge}</td>
+                    <td style="color: #bbb;">${item.discordUser}</td>
+                    <td><a href="${item.fileUrl}" target="_blank" class="url-link">${item.fileUrl}</a></td>
+                    <td style="padding: 14px; display: flex; gap: 6px; align-items: center;">
+                        <form action="/admin/toggle-exhausted" method="POST" style="display:inline;">
+                            <input type="hidden" name="index" value="${index}">
+                            <button class="btn btn-sm" style="background: #222; color: #fff; border: 1px solid #444;">
+                                ${item.exhausted ? 'Activar' : 'Agotar'}
+                            </button>
+                        </form>
+                        <form action="/admin/delete-key" method="POST" style="display:inline;">
+                            <input type="hidden" name="index" value="${index}">
+                            <button class="btn btn-sm" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        let contentSection = '';
+
+        if (isAdmin) {
+            contentSection = `
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>Total Keys</h3><p>${totalKeys}</p></div>
+                    <div class="stat-card"><h3>Disponibles</h3><p style="color: #34c759;">${availableKeys}</p></div>
+                    <div class="stat-card"><h3>Canjeadas</h3><p style="color: #ff3b30;">${usedKeys}</p></div>
+                    <div class="stat-card"><h3>Agotadas</h3><p style="color: #aeaeb2;">${exhaustedKeys}</p></div>
+                </div>
+
                 <div class="admin-nav-banner">
                     <div>
                         <strong style="color: #fff; font-size: 14px;">⚙️ Menú de Administración .gg</strong>
                         <p style="font-size: 12px; color: #888; margin-top: 2px;">Control total de licencias y moderación de usuarios.</p>
                     </div>
-                    <span style="background: rgba(52, 199, 89, 0.15); color: #34c759; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">Sesión Segura</span>
+                    <form action="/admin/logout" method="POST" style="margin:0;">
+                        <button class="btn btn-danger btn-sm">Cerrar Sesión</button>
+                    </form>
                 </div>
+
                 <div class="panel-box">
                     <div class="panel-title">➕ Generar Nueva Key</div>
                     <form action="/admin/add-key" method="POST" style="display:flex; gap:10px; flex-wrap: wrap;">
@@ -174,6 +149,7 @@ function renderAdminPanel(req, res) {
                         <button class="btn btn-success">Añadir Clave</button>
                     </form>
                 </div>
+
                 <div class="panel-box">
                     <div class="panel-title">🗑️ Eliminar Key por Nombre</div>
                     <form action="/admin/delete-by-name" method="POST" style="display:flex; gap:10px;">
@@ -181,6 +157,7 @@ function renderAdminPanel(req, res) {
                         <button class="btn" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar Key</button>
                     </form>
                 </div>
+
                 <div class="panel-box">
                     <div class="panel-title">🚫 Banear Usuario de Discord</div>
                     <form action="/admin/ban-user" method="POST" style="display:flex; gap:10px;">
@@ -189,50 +166,63 @@ function renderAdminPanel(req, res) {
                     </form>
                     <p style="font-size: 12px; color: #888; margin-top: 10px;">Usuarios baneados: ${db.bannedUsers.join(', ') || 'Ninguno'}</p>
                 </div>
-            `)
-            .replace('{{{adminHeaderAction}}}', '<th>Acciones</th>')
-            .replace('{{{rows}}}', rows);
 
+                <div class="panel-box">
+                    <div class="panel-title">Registro Oficial de Licencias</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Clave</th>
+                                <th>Estado</th>
+                                <th>Usuario Discord</th>
+                                <th>Enlace de Archivo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (unlockedUrl) {
+            contentSection = `
+                <div class="auth-card" style="text-align: center;">
+                    <h2 style="font-size: 20px; margin-bottom: 10px; color: #34c759;">¡Key Verificada con Éxito!</h2>
+                    <p style="color: #888; font-size: 13px; margin-bottom: 20px;">Tu acceso al contenido ha sido concedido.</p>
+                    <a href="${unlockedUrl}" target="_blank" class="btn" style="display: inline-block; text-decoration: none; background: #fff; color: #000; padding: 12px 24px; font-weight: bold; border-radius: 8px;">Descargar Archivo</a>
+                    <div style="margin-top: 20px;">
+                        <a href="/" style="color: #888; font-size: 12px; text-decoration: none;">← Volver al inicio</a>
+                    </div>
+                </div>
+            `;
+        } else {
+            contentSection = `
+                <div class="auth-card">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Acceso a .gg</h2>
+                        <p style="color: #888; font-size: 12px;">Introduce tu key para desbloquear el contenido.</p>
+                    </div>
+                    ${errorMessage ? `<div style="background: rgba(255,59,48,0.1); color: #ff3b30; border: 1px solid rgba(255,59,48,0.2); padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; text-align: center;">${errorMessage}</div>` : ''}
+                    <form action="/" method="GET" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div>
+                            <label style="display: block; font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Clave de Acceso</label>
+                            <input type="text" name="key" placeholder="Ej: MFA-KEY-9981" required style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Usuario de Discord</label>
+                            <input type="text" name="user" placeholder="Ej: Usuario#1234" required style="width: 100%;">
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%; margin-top: 5px; background: #fff; color: #000; padding: 10px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;">Verificar Key</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        let finalHtml = htmlTemplate.replace('{{{content}}}', contentSection);
         res.send(finalHtml);
     });
 }
-
-app.get('/getkey', (req, res) => {
-    const userKey = req.query.key;
-    const discordUser = req.query.user || 'Usuario de Discord';
-
-    if (db.bannedUsers.includes(discordUser)) {
-        return res.json({ valid: false, message: 'Tu usuario de Discord está baneado del sistema.' });
-    }
-
-    if (!userKey) {
-        return res.json({ valid: false, message: 'No se proporcionó ninguna clave.' });
-    }
-
-    const foundKey = db.keys.find(k => k.key === userKey);
-
-    if (!foundKey) {
-        return res.json({ valid: false, message: 'La clave ingresada no existe.' });
-    }
-
-    if (foundKey.exhausted) {
-        return res.json({ valid: false, message: 'Esta clave ha sido marcada como agotada por el administrador.' });
-    }
-
-    if (foundKey.used) {
-        return res.json({ valid: false, message: 'Esta clave ya fue utilizada anteriormente.' });
-    }
-
-    foundKey.used = true;
-    foundKey.discordUser = discordUser;
-    saveDatabase(db);
-
-    return res.json({
-        valid: true,
-        fileUrl: foundKey.fileUrl,
-        message: '¡Clave canjeada con éxito!'
-    });
-});
 
 app.post('/admin/logout', (req, res) => {
     activeAdmins.delete(req.ip);
