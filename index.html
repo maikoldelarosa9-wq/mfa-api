@@ -68,7 +68,7 @@
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
         .badge-active { background: rgba(52, 199, 89, 0.1); color: #34c759; }
         .badge-used { background: rgba(255, 59, 48, 0.1); color: #ff3b30; }
-        .badge-blocked { background: rgba(255, 149, 0, 0.1); color: #ff9500; }
+        .badge-exhausted { background: rgba(142, 142, 147, 0.1); color: #aeaeb2; }
     </style>
 </head>
 <body>
@@ -90,7 +90,7 @@
             <div class="stat-card"><h3>Total Keys</h3><p>{{totalKeys}}</p></div>
             <div class="stat-card"><h3>Disponibles</h3><p style="color: #34c759;">{{availableKeys}}</p></div>
             <div class="stat-card"><h3>Canjeadas</h3><p style="color: #ff3b30;">{{usedKeys}}</p></div>
-            <div class="stat-card"><h3>Bloqueadas</h3><p style="color: #ff9500;">{{blockedKeys}}</p></div>
+            <div class="stat-card"><h3>Agotadas</h3><p style="color: #aeaeb2;">{{exhaustedKeys}}</p></div>
         </div>
 
         {{{adminPanelSection}}}

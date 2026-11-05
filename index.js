@@ -8,41 +8,42 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 let keysDatabase = [
-    { key: 'MFA-KEY-9981', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-1', discordUser: 'Ninguno', blocked: false },
-    { key: 'MFA-KEY-1234', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-2', discordUser: 'Ninguno', blocked: false },
-    { key: 'MFA-KEY-5678', used: true, fileUrl: 'https://mega.nz/archivo-ejemplo-3', discordUser: 'Usuario#1234', blocked: false }
+    { key: 'MFA-KEY-9981', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-1', discordUser: 'Ninguno', exhausted: false },
+    { key: 'MFA-KEY-1234', used: false, fileUrl: 'https://mega.nz/archivo-ejemplo-2', discordUser: 'Ninguno', exhausted: false },
+    { key: 'MFA-KEY-5678', used: true, fileUrl: 'https://mega.nz/archivo-ejemplo-3', discordUser: 'Usuario#1234', exhausted: false }
 ];
 
 let bannedUsers = ['UsuarioTraficante#0000'];
 const ADMIN_PASSWORD = ".gg";
-
-// Almacenamiento temporal de sesiones activas por IP o memoria simple
 let activeAdmins = new Set();
 
 app.get('/', (req, res) => {
-    // Si recarga, limpiamos cualquier estado anterior o validamos por parámetro temporal
     const clientIp = req.ip;
     const isAdmin = activeAdmins.has(clientIp);
     
     let totalKeys = keysDatabase.length;
     let usedKeys = keysDatabase.filter(k => k.used).length;
-    let blockedKeys = keysDatabase.filter(k => k.blocked).length;
-    let availableKeys = totalKeys - usedKeys - blockedKeys;
+    let exhaustedKeys = keysDatabase.filter(k => k.exhausted).length;
+    let availableKeys = totalKeys - usedKeys - exhaustedKeys;
 
     let rows = keysDatabase.map((item, index) => {
-        let statusBadge = item.blocked 
-            ? '<span class="badge badge-blocked">⛔ Bloqueada</span>' 
+        let statusBadge = item.exhausted 
+            ? '<span class="badge badge-exhausted">⚪ Agotada</span>' 
             : (item.used 
                 ? '<span class="badge badge-used">🔴 Utilizada</span>' 
                 : '<span class="badge badge-active">🟢 Disponible</span>');
 
         let adminActions = isAdmin ? `
-            <td style="padding: 14px;">
-                <form action="/admin/toggle-block" method="POST" style="display:inline;">
+            <td style="padding: 14px; display: flex; gap: 6px; align-items: center;">
+                <form action="/admin/toggle-exhausted" method="POST" style="display:inline;">
                     <input type="hidden" name="index" value="${index}">
-                    <button class="btn btn-sm ${item.blocked ? 'btn-success' : 'btn-danger'}">
-                        ${item.blocked ? 'Desbloquear' : 'Bloquear'}
+                    <button class="btn btn-sm" style="background: #222; color: #fff; border: 1px solid #444;">
+                        ${item.exhausted ? 'Activar' : 'Agotar'}
                     </button>
+                </form>
+                <form action="/admin/delete-key" method="POST" style="display:inline;">
+                    <input type="hidden" name="index" value="${index}">
+                    <button class="btn btn-sm" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar</button>
                 </form>
             </td>
         ` : '';
@@ -58,14 +59,13 @@ app.get('/', (req, res) => {
         `;
     }).join('');
 
-    // Solo muestra el campo para poner la clave y acceder de forma limpia
     let adminLoginSection = isAdmin ? `
         <form action="/admin/logout" method="POST">
             <button class="btn btn-danger btn-sm">Cerrar Sesión</button>
         </form>
     ` : `
         <form action="/admin/login" method="POST" style="display:flex; gap:8px;">
-            <input type="password" name="password" placeholder="Clave admin" required>
+            <input type="password" name="password" class="admin-input" placeholder="Clave admin" required>
             <button class="btn btn-sm">Acceder</button>
         </form>
     `;
@@ -87,6 +87,15 @@ app.get('/', (req, res) => {
                 <button class="btn btn-success">Añadir Clave</button>
             </form>
         </div>
+
+        <div class="panel-box">
+            <div class="panel-title">🗑️ Eliminar Key por Nombre</div>
+            <form action="/admin/delete-by-name" method="POST" style="display:flex; gap:10px;">
+                <input type="text" name="keyName" placeholder="Ej: MFA-KEY-9981" required style="flex:1;">
+                <button class="btn" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar Key</button>
+            </form>
+        </div>
+
         <div class="panel-box">
             <div class="panel-title">🚫 Banear Usuario de Discord</div>
             <form action="/admin/ban-user" method="POST" style="display:flex; gap:10px;">
@@ -97,7 +106,7 @@ app.get('/', (req, res) => {
         </div>
     ` : '';
 
-    let adminHeaderAction = isAdmin ? '<th>Acción</th>' : '';
+    let adminHeaderAction = isAdmin ? '<th>Acciones</th>' : '';
 
     fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, htmlTemplate) => {
         if (err) return res.status(500).send('Error al cargar la interfaz web.');
@@ -107,7 +116,7 @@ app.get('/', (req, res) => {
             .replace('{{totalKeys}}', totalKeys)
             .replace('{{availableKeys}}', availableKeys)
             .replace('{{usedKeys}}', usedKeys)
-            .replace('{{blockedKeys}}', blockedKeys)
+            .replace('{{exhaustedKeys}}', exhaustedKeys)
             .replace('{{{adminPanelSection}}}', adminPanelSection)
             .replace('{{{adminHeaderAction}}}', adminHeaderAction)
             .replace('{{{rows}}}', rows);
@@ -129,11 +138,11 @@ app.post('/admin/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.post('/admin/toggle-block', (req, res) => {
+app.post('/admin/toggle-exhausted', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { index } = req.body;
     if (keysDatabase[index]) {
-        keysDatabase[index].blocked = !keysDatabase[index].blocked;
+        keysDatabase[index].exhausted = !keysDatabase[index].exhausted;
     }
     res.redirect('/');
 });
@@ -142,8 +151,24 @@ app.post('/admin/add-key', (req, res) => {
     if (!activeAdmins.has(req.ip)) return res.redirect('/');
     const { key, fileUrl } = req.body;
     if (key && fileUrl) {
-        keysDatabase.push({ key, used: false, fileUrl, discordUser: 'Ninguno', blocked: false });
+        keysDatabase.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
     }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-key', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { index } = req.body;
+    if (keysDatabase[index]) {
+        keysDatabase.splice(index, 1);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-by-name', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { keyName } = req.body;
+    keysDatabase = keysDatabase.filter(k => k.key !== keyName);
     res.redirect('/');
 });
 
@@ -174,8 +199,8 @@ app.get('/getkey', (req, res) => {
         return res.json({ valid: false, message: 'La clave ingresada no existe.' });
     }
 
-    if (foundKey.blocked) {
-        return res.json({ valid: false, message: 'Esta clave ha sido bloqueada por el administrador.' });
+    if (foundKey.exhausted) {
+        return res.json({ valid: false, message: 'Esta clave ha sido marcada como agotada por el administrador.' });
     }
 
     if (foundKey.used) {
