@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>.GG — Panel de Administración & Licencias</title>
+    <title>.gg — Panel de Administración & Licencias</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -20,7 +20,8 @@
         
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 25px; margin-bottom: 30px; }
         .brand { display: flex; align-items: center; gap: 14px; }
-        .logo-box { width: 44px; height: 44px; background: #ffffff; color: #000000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; letter-spacing: -1px; }
+        .logo-box { width: 44px; height: 44px; background: #0a0a0c; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .logo-box img { width: 100%; height: 100%; object-fit: cover; }
         h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
         .subtitle { font-size: 12px; color: var(--text-muted); }
 
@@ -75,43 +76,5 @@
     <div class="container">
         <header>
             <div class="brand">
-                <div class="logo-box">.gg</div>
-                <div>
-                    <h1>.GG API</h1>
-                    <span class="subtitle">Panel de Distribución y Licencias</span>
-                </div>
-            </div>
-            <div class="login-box">
-                {{{adminLoginSection}}}
-            </div>
-        </header>
-
-        <div class="stats-grid">
-            <div class="stat-card"><h3>Total Keys</h3><p>{{totalKeys}}</p></div>
-            <div class="stat-card"><h3>Disponibles</h3><p style="color: #34c759;">{{availableKeys}}</p></div>
-            <div class="stat-card"><h3>Canjeadas</h3><p style="color: #ff3b30;">{{usedKeys}}</p></div>
-            <div class="stat-card"><h3>Agotadas</h3><p style="color: #aeaeb2;">{{exhaustedKeys}}</p></div>
-        </div>
-
-        {{{adminPanelSection}}}
-
-        <div class="panel-box">
-            <div class="panel-title">Registro Oficial de Licencias</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Clave</th>
-                        <th>Estado</th>
-                        <th>Usuario Discord</th>
-                        <th>Enlace de Archivo</th>
-                        {{{adminHeaderAction}}}
-                    </tr>
-                </thead>
-                <tbody>
-                    {{{rows}}}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+                <div class="logo-box">
+                    <img src="
