@@ -42,7 +42,13 @@ app.get('/', (req, res) => {
     const userKey = req.query.key;
     const discordUser = req.query.user;
 
-    // Si es administrador, mostrar el panel de administración
+    // Si introduce la clave de admin en el campo general
+    if (userKey === ADMIN_PASSWORD) {
+        activeAdmins.add(clientIp);
+        return res.redirect('/');
+    }
+
+    // Si ya es administrador activo, mostrar el panel
     if (isAdmin) {
         return renderAdminPanel(req, res);
     }
@@ -73,7 +79,6 @@ app.get('/', (req, res) => {
             saveDatabase(db);
         }
 
-        // Si la key es válida, mostrar el acceso al archivo descargable
         return res.send(`
             <!DOCTYPE html>
             <html lang="es">
@@ -97,7 +102,7 @@ app.get('/', (req, res) => {
         `);
     }
 
-    // Si no hay key ni admin, mostrar pantalla obligatoria de autenticación/key
+    // Pantalla de autenticación obligatoria
     return res.send(renderAuthPage());
 });
 
@@ -115,6 +120,77 @@ function renderAuthPage(errorMessage = "") {
                 .box { background: var(--card); border: 1px solid var(--border); padding: 30px; border-radius: 14px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
                 h2 { font-size: 18px; margin-bottom: 5px; font-weight: 700; }
                 p { font-size: 12px; color: #888; margin-bottom: 20px; }
-                input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; outline: none; }
+                input { width: 100%; background: #000000 !important; border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; outline: none; }
                 input:focus { border-color: #444; }
-                button { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight
+                button { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+                button:hover { opacity: 0.85; }
+                .error { color: #ff3b30; font-size: 12px; margin-bottom: 12px; text-align: center; }
+            </style>
+        </head>
+        <body>
+            <div class="box">
+                <h2>Acceso a .gg</h2>
+                <p>Introduce tu clave o clave de administrador para continuar.</p>
+                ${errorMessage ? `<div class="error">${errorMessage}</div>` : ''}
+                <form action="/" method="GET">
+                    <input type="text" name="key" placeholder="Introduce tu Key o Admin Pass (.gg)" required>
+                    <input type="text" name="user" placeholder="Tu usuario de Discord (ej: Usuario#1234)">
+                    <button type="submit">Ingresar</button>
+                </form>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function renderAdminPanel(req, res) {
+    let totalKeys = db.keys.length;
+    let usedKeys = db.keys.filter(k => k.used).length;
+    let exhaustedKeys = db.keys.filter(k => k.exhausted).length;
+    let availableKeys = totalKeys - usedKeys - exhaustedKeys;
+
+    let rows = db.keys.map((item, index) => {
+        let statusBadge = item.exhausted 
+            ? '<span class="badge badge-exhausted">⚪ Agotada</span>' 
+            : (item.used 
+                ? '<span class="badge badge-used">🔴 Utilizada</span>' 
+                : '<span class="badge badge-active">🟢 Disponible</span>');
+
+        return `
+            <tr>
+                <td class="font-mono">${item.key}</td>
+                <td>${statusBadge}</td>
+                <td style="color: #bbb;">${item.discordUser}</td>
+                <td><a href="${item.fileUrl}" target="_blank" class="url-link">${item.fileUrl}</a></td>
+                <td style="padding: 14px; display: flex; gap: 6px; align-items: center;">
+                    <form action="/admin/toggle-exhausted" method="POST" style="display:inline;">
+                        <input type="hidden" name="index" value="${index}">
+                        <button class="btn btn-sm" style="background: #222; color: #fff; border: 1px solid #444;">
+                            ${item.exhausted ? 'Activar' : 'Agotar'}
+                        </button>
+                    </form>
+                    <form action="/admin/delete-key" method="POST" style="display:inline;">
+                        <input type="hidden" name="index" value="${index}">
+                        <button class="btn btn-sm" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, htmlTemplate) => {
+        if (err) return res.status(500).send('Error al cargar la interfaz web.');
+
+        let finalHtml = htmlTemplate
+            .replace('{{{adminLoginSection}}}', `<form action="/admin/logout" method="POST"><button class="btn btn-danger btn-sm">Cerrar Sesión</button></form>`)
+            .replace('{{totalKeys}}', totalKeys)
+            .replace('{{availableKeys}}', availableKeys)
+            .replace('{{usedKeys}}', usedKeys)
+            .replace('{{exhaustedKeys}}', exhaustedKeys)
+            .replace('{{{adminPanelSection}}}', `
+                <div class="admin-nav-banner">
+                    <div>
+                        <strong style="color: #fff; font-size: 14px;">⚙️ Menú de Administración .gg</strong>
+                        <p style="font-size: 12px; color: #888; margin-top: 2px;">Control total de licencias y moderación de usuarios.</p>
+                    </div>
+                    <span style="background: rgba(52, 199, 89, 0.15); color: #34c759; padding: 4px 10px; border-radius: 6px; font-size: 1
