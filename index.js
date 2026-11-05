@@ -180,4 +180,30 @@ app.post('/admin/add-key', (req, res) => {
     if (!activeAdmins.has(clientIp)) return res.redirect('/');
     const { key, fileUrl } = req.body;
     if (key && fileUrl) {
-        db.keys.push({ key, used: false, file
+        db.keys.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
+        saveDatabase(db);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-key', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    if (!activeAdmins.has(clientIp)) return res.redirect('/');
+    const { index } = req.body;
+    if (db.keys[index]) {
+        db.keys.splice(index, 1);
+        saveDatabase(db);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-by-name', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    if (!activeAdmins.has(clientIp)) return res.redirect('/');
+    const { keyName } = req.body;
+    db.keys = db.keys.filter(k => k.key !== keyName);
+    saveDatabase(db);
+    res.redirect('/');
+});
+
+app.post('/admin/ban-user', (req, res) => {
