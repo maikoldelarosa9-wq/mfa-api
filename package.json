@@ -1,12 +1,12 @@
 {
   "name": "mfa-api",
   "version": "1.0.0",
-  "description": "API de gestion de licencias",
+  "description": ".gg API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.18.2"
   }
 }
