@@ -77,4 +77,44 @@
         <header>
             <div class="brand">
                 <div class="logo-box">
-                    <img src="
+                    <strong style="color: #fff;">.gg</strong>
+                </div>
+                <div>
+                    <h1>.gg</h1>
+                    <span class="subtitle">Panel de Distribución y Licencias</span>
+                </div>
+            </div>
+            <div class="login-box">
+                {{{adminLoginSection}}}
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Total Keys</h3><p>{{totalKeys}}</p></div>
+            <div class="stat-card"><h3>Disponibles</h3><p style="color: #34c759;">{{availableKeys}}</p></div>
+            <div class="stat-card"><h3>Canjeadas</h3><p style="color: #ff3b30;">{{usedKeys}}</p></div>
+            <div class="stat-card"><h3>Agotadas</h3><p style="color: #aeaeb2;">{{exhaustedKeys}}</p></div>
+        </div>
+
+        {{{adminPanelSection}}}
+
+        <div class="panel-box">
+            <div class="panel-title">Registro Oficial de Licencias</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Clave</th>
+                        <th>Estado</th>
+                        <th>Usuario Discord</th>
+                        <th>Enlace de Archivo</th>
+                        {{{adminHeaderAction}}}
+                    </tr>
+                </thead>
+                <tbody>
+                    {{{rows}}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
