@@ -14,7 +14,7 @@ let keysDatabase = [
 ];
 
 let bannedUsers = ['UsuarioTraficante#0000'];
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_PASSWORD = ".gg";
 
 app.get('/', (req, res) => {
     const isAdmin = req.query.admin === ADMIN_PASSWORD;
@@ -37,7 +37,7 @@ app.get('/', (req, res) => {
                     <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
                     <input type="hidden" name="index" value="${index}">
                     <button class="btn btn-sm ${item.blocked ? 'btn-success' : 'btn-danger'}">
-                        ${item.blocked ? 'Desbloquear' : 'Bloquear Key'}
+                        ${item.blocked ? 'Desbloquear' : 'Bloquear'}
                     </button>
                 </form>
             </td>
@@ -45,53 +45,58 @@ app.get('/', (req, res) => {
 
         return `
             <tr>
-                <td class="font-mono key-text">${item.key}</td>
+                <td class="font-mono">${item.key}</td>
                 <td>${statusBadge}</td>
-                <td>${item.discordUser}</td>
-                <td class="url-text"><a href="${item.fileUrl}" target="_blank">${item.fileUrl}</a></td>
+                <td style="color: #bbb;">${item.discordUser}</td>
+                <td><a href="${item.fileUrl}" target="_blank" class="url-link">${item.fileUrl}</a></td>
                 ${adminActions}
             </tr>
         `;
     }).join('');
 
     let adminLoginSection = isAdmin ? `
-        <span style="color: #10b981; font-weight: 600; font-size: 13px;"> Modo Admin Activo</span>
+        <span style="color: #34c759; font-weight: 600; font-size: 13px;">● Admin .gg Activo</span>
         <a href="/" class="btn btn-danger btn-sm" style="text-decoration:none;">Salir</a>
     ` : `
         <form action="/" method="GET" style="display:flex; gap:8px;">
-            <input type="password" name="admin" placeholder="Clave de Admin" required>
+            <input type="password" name="admin" placeholder="Clave admin (.gg)" required>
             <button class="btn btn-sm">Acceder</button>
         </form>
     `;
 
     let adminPanelSection = isAdmin ? `
+        <div class="admin-nav-banner">
+            <div>
+                <strong style="color: #fff; font-size: 14px;">⚙️ Menú de Administración .gg</strong>
+                <p style="font-size: 12px; color: #888; margin-top: 2px;">Control total de licencias y moderación de usuarios.</p>
+            </div>
+            <span style="background: rgba(52, 199, 89, 0.15); color: #34c759; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">Sesión Segura</span>
+        </div>
+
         <div class="panel-box">
-            <h3 style="margin-bottom: 15px; font-size:16px;">➕ Generar Nueva Key</h3>
+            <div class="panel-title">➕ Generar Nueva Key</div>
             <form action="/admin/add-key" method="POST" style="display:flex; gap:10px; flex-wrap: wrap;">
                 <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
-                <input type="text" name="key" placeholder="Ej: MFA-KEY-2026" required style="flex:1;">
+                <input type="text" name="key" placeholder="Ej: .GG-KEY-2026" required style="flex:1;">
                 <input type="text" name="fileUrl" placeholder="Link de descarga (MEGA/Mediafire)" required style="flex:2;">
                 <button class="btn btn-success">Añadir Clave</button>
             </form>
         </div>
         <div class="panel-box">
-            <h3 style="margin-bottom: 15px; font-size:16px;">🚫 Banear Usuario de Discord</h3>
+            <div class="panel-title">🚫 Banear Usuario de Discord</div>
             <form action="/admin/ban-user" method="POST" style="display:flex; gap:10px;">
                 <input type="hidden" name="password" value="${ADMIN_PASSWORD}">
-                <input type="text" name="discordUser" placeholder="Usuario#0000 o ID de Discord" required style="flex:1;">
+                <input type="text" name="discordUser" placeholder="Usuario#0000" required style="flex:1;">
                 <button class="btn btn-danger">Banear Usuario</button>
             </form>
-            <p style="font-size: 12px; color: var(--text-dim); margin-top: 10px;">Baneados actualmente: ${bannedUsers.join(', ') || 'Ninguno'}</p>
+            <p style="font-size: 12px; color: #888; margin-top: 10px;">Usuarios baneados: ${bannedUsers.join(', ') || 'Ninguno'}</p>
         </div>
     ` : '';
 
-    let adminHeaderAction = isAdmin ? '<th>Acción Admin</th>' : '';
+    let adminHeaderAction = isAdmin ? '<th>Acción</th>' : '';
 
-    // Leer el archivo HTML externo y reemplazar variables
     fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, htmlTemplate) => {
-        if (err) {
-            return res.status(500).send('Error al cargar la interfaz web.');
-        }
+        if (err) return res.status(500).send('Error al cargar la interfaz web.');
 
         let finalHtml = htmlTemplate
             .replace('{{{adminLoginSection}}}', adminLoginSection)
