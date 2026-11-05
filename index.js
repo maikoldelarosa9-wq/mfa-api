@@ -56,21 +56,21 @@ app.get('/', (req, res) => {
     // Si el usuario ingresó una key, validarla
     if (userKey) {
         if (db.bannedUsers.includes(discordUser)) {
-            return res.send(renderAuthPage("Tu usuario de Discord está baneado del sistema."));
+            return sendAuthError(res, "Tu usuario de Discord está baneado del sistema.");
         }
 
         const foundKey = db.keys.find(k => k.key === userKey);
 
         if (!foundKey) {
-            return res.send(renderAuthPage("La clave ingresada no existe."));
+            return sendAuthError(res, "La clave ingresada no existe.");
         }
 
         if (foundKey.exhausted) {
-            return res.send(renderAuthPage("Esta clave ha sido marcada como agotada."));
+            return sendAuthError(res, "Esta clave ha sido marcada como agotada.");
         }
 
         if (foundKey.used && foundKey.discordUser !== discordUser) {
-            return res.send(renderAuthPage("Esta clave ya fue utilizada por otro usuario."));
+            return sendAuthError(res, "Esta clave ya fue utilizada por otro usuario.");
         }
 
         if (!foundKey.used) {
@@ -102,45 +102,16 @@ app.get('/', (req, res) => {
         `);
     }
 
-    // Pantalla de autenticación obligatoria
-    return res.send(renderAuthPage());
+    // Pantalla de autenticación obligatoria inicial
+    return sendAuthError(res, "");
 });
 
-function renderAuthPage(errorMessage = "") {
-    return `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <title>.gg — Autenticación</title>
-            <style>
-                :root { --bg: #000000; --card: #0a0a0c; --border: #1a1a1e; }
-                * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-                body { background: var(--bg); color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                .box { background: var(--card); border: 1px solid var(--border); padding: 30px; border-radius: 14px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-                h2 { font-size: 18px; margin-bottom: 5px; font-weight: 700; }
-                p { font-size: 12px; color: #888; margin-bottom: 20px; }
-                input { width: 100%; background: #000000 !important; border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; outline: none; }
-                input:focus { border-color: #444; }
-                button { width: 100%; background: #fff; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
-                button:hover { opacity: 0.85; }
-                .error { color: #ff3b30; font-size: 12px; margin-bottom: 12px; text-align: center; }
-            </style>
-        </head>
-        <body>
-            <div class="box">
-                <h2>Acceso a .gg</h2>
-                <p>Introduce tu clave o clave de administrador para continuar.</p>
-                ${errorMessage ? `<div class="error">${errorMessage}</div>` : ''}
-                <form action="/" method="GET">
-                    <input type="text" name="key" placeholder="Introduce tu Key o Admin Pass (.gg)" required>
-                    <input type="text" name="user" placeholder="Tu usuario de Discord (ej: Usuario#1234)">
-                    <button type="submit">Ingresar</button>
-                </form>
-            </div>
-        </body>
-        </html>
-    `;
+function sendAuthError(res, errorMessage) {
+    fs.readFile(path.join(__dirname, 'auth.html'), 'utf8', (err, html) => {
+        if (err) return res.status(500).send('Error al cargar la página de autenticación.');
+        const errorHtml = errorMessage ? `<div class="error">${errorMessage}</div>` : '';
+        res.send(html.replace('{{{errorMessage}}}', errorHtml));
+    });
 }
 
 function renderAdminPanel(req, res) {
@@ -193,4 +164,131 @@ function renderAdminPanel(req, res) {
                         <strong style="color: #fff; font-size: 14px;">⚙️ Menú de Administración .gg</strong>
                         <p style="font-size: 12px; color: #888; margin-top: 2px;">Control total de licencias y moderación de usuarios.</p>
                     </div>
-                    <span style="background: rgba(52, 199, 89, 0.15); color: #34c759; padding: 4px 10px; border-radius: 6px; font-size: 1
+                    <span style="background: rgba(52, 199, 89, 0.15); color: #34c759; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold;">Sesión Segura</span>
+                </div>
+                <div class="panel-box">
+                    <div class="panel-title">➕ Generar Nueva Key</div>
+                    <form action="/admin/add-key" method="POST" style="display:flex; gap:10px; flex-wrap: wrap;">
+                        <input type="text" name="key" placeholder="Ej: .GG-KEY-2026" required style="flex:1;">
+                        <input type="text" name="fileUrl" placeholder="Link de descarga (MEGA/Mediafire)" required style="flex:2;">
+                        <button class="btn btn-success">Añadir Clave</button>
+                    </form>
+                </div>
+                <div class="panel-box">
+                    <div class="panel-title">🗑️ Eliminar Key por Nombre</div>
+                    <form action="/admin/delete-by-name" method="POST" style="display:flex; gap:10px;">
+                        <input type="text" name="keyName" placeholder="Ej: MFA-KEY-9981" required style="flex:1;">
+                        <button class="btn" style="background: #111; color: #ff3b30; border: 1px solid #ff3b30;">Eliminar Key</button>
+                    </form>
+                </div>
+                <div class="panel-box">
+                    <div class="panel-title">🚫 Banear Usuario de Discord</div>
+                    <form action="/admin/ban-user" method="POST" style="display:flex; gap:10px;">
+                        <input type="text" name="discordUser" placeholder="Usuario#0000" required style="flex:1;">
+                        <button class="btn btn-danger">Banear Usuario</button>
+                    </form>
+                    <p style="font-size: 12px; color: #888; margin-top: 10px;">Usuarios baneados: ${db.bannedUsers.join(', ') || 'Ninguno'}</p>
+                </div>
+            `)
+            .replace('{{{adminHeaderAction}}}', '<th>Acciones</th>')
+            .replace('{{{rows}}}', rows);
+
+        res.send(finalHtml);
+    });
+}
+
+app.get('/getkey', (req, res) => {
+    const userKey = req.query.key;
+    const discordUser = req.query.user || 'Usuario de Discord';
+
+    if (db.bannedUsers.includes(discordUser)) {
+        return res.json({ valid: false, message: 'Tu usuario de Discord está baneado del sistema.' });
+    }
+
+    if (!userKey) {
+        return res.json({ valid: false, message: 'No se proporcionó ninguna clave.' });
+    }
+
+    const foundKey = db.keys.find(k => k.key === userKey);
+
+    if (!foundKey) {
+        return res.json({ valid: false, message: 'La clave ingresada no existe.' });
+    }
+
+    if (foundKey.exhausted) {
+        return res.json({ valid: false, message: 'Esta clave ha sido marcada como agotada por el administrador.' });
+    }
+
+    if (foundKey.used) {
+        return res.json({ valid: false, message: 'Esta clave ya fue utilizada anteriormente.' });
+    }
+
+    foundKey.used = true;
+    foundKey.discordUser = discordUser;
+    saveDatabase(db);
+
+    return res.json({
+        valid: true,
+        fileUrl: foundKey.fileUrl,
+        message: '¡Clave canjeada con éxito!'
+    });
+});
+
+app.post('/admin/logout', (req, res) => {
+    activeAdmins.delete(req.ip);
+    res.redirect('/');
+});
+
+app.post('/admin/toggle-exhausted', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { index } = req.body;
+    if (db.keys[index]) {
+        db.keys[index].exhausted = !db.keys[index].exhausted;
+        saveDatabase(db);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/add-key', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { key, fileUrl } = req.body;
+    if (key && fileUrl) {
+        db.keys.push({ key, used: false, fileUrl, discordUser: 'Ninguno', exhausted: false });
+        saveDatabase(db);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-key', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { index } = req.body;
+    if (db.keys[index]) {
+        db.keys.splice(index, 1);
+        saveDatabase(db);
+    }
+    res.redirect('/');
+});
+
+app.post('/admin/delete-by-name', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { keyName } = req.body;
+    db.keys = db.keys.filter(k => k.key !== keyName);
+    saveDatabase(db);
+    res.redirect('/');
+});
+
+app.post('/admin/ban-user', (req, res) => {
+    if (!activeAdmins.has(req.ip)) return res.redirect('/');
+    const { discordUser } = req.body;
+    if (discordUser) {
+        if (!db.bannedUsers.includes(discordUser)) {
+            db.bannedUsers.push(discordUser);
+            saveDatabase(db);
+        }
+    }
+    res.redirect('/');
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
+});
